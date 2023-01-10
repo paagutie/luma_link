@@ -37,7 +37,7 @@ add_executable(${PROJECT_NAME}_vehicle src/luma_link_vehicle.cpp)
 ament_target_dependencies(${PROJECT_NAME}_vehicle rclcpp geometry_msgs dvl_msgs sensor_msgs uuv_msgs serial)
 
 add_executable(${PROJECT_NAME}_surface src/luma_link_surface.cpp)
-ament_target_dependencies(${PROJECT_NAME}_surface rclcpp sensor_msgs dvl_msgs luma_msgs serial)
+ament_target_dependencies(${PROJECT_NAME}_surface rclcpp sensor_msgs dvl_msgs luma_msgs uuv_msgs serial)
 
 
 #Install C++ targets
