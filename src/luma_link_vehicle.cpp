@@ -20,6 +20,7 @@ Node("luma_link_vehicle_node")
 
     serial_euler_array = new uint8_t[50];
     serial_baro_array = new uint8_t[50];
+    serial_dvl_array = new uint8_t[50];
     
     first_time = std::chrono::steady_clock::now();
     first_time_send = first_time;
@@ -94,6 +95,7 @@ Luma_Link_Vehicle::~Luma_Link_Vehicle() {
 
     delete [] serial_euler_array;
     delete [] serial_baro_array;
+    delete [] serial_dvl_array;
   
     my_serial.flush();
     my_serial.close();
@@ -182,18 +184,41 @@ void Luma_Link_Vehicle::euler_callback(const geometry_msgs::msg::Vector3Stamped:
 
 void Luma_Link_Vehicle::dvl_callback(const dvl_msgs::msg::DVL::SharedPtr dvl)
 {
-    float altitude = (float)dvl->altitude;
-    float velocity_x = (float)dvl->velocity.x;
-    float velocity_y = (float)dvl->velocity.y;
-    float velocity_z = (float)dvl->velocity.z;
-    float fom = (float)dvl->fom;
+    int stamp_sec_ = (int)dvl->header.stamp.sec;
+    int stamp_nanosec_ = (int)dvl->header.stamp.nanosec;
+    float altitude_ = (float)dvl->altitude;
+    float velocity_x_ = (float)dvl->velocity.x;
+    float velocity_y_ = (float)dvl->velocity.y;
+    float velocity_z_ = (float)dvl->velocity.z;
+    float fom_ = (float)dvl->fom;
 
-    (void)altitude;
-    (void)velocity_x;
-    (void)velocity_y;
-    (void)velocity_z;
-    (void)fom;
+    // 28 bytes
+    static_assert(sizeof(float) == 4);
+    uint8_t *stamp_sec = reinterpret_cast<uint8_t *>(&stamp_sec_);
+    uint8_t *stamp_nanosec = reinterpret_cast<uint8_t *>(&stamp_nanosec_);
+    uint8_t *altitude = reinterpret_cast<uint8_t *>(&altitude_);
+    uint8_t *velocity_x = reinterpret_cast<uint8_t *>(&velocity_x_);
+    uint8_t *velocity_y = reinterpret_cast<uint8_t *>(&velocity_y_);
+    uint8_t *velocity_z = reinterpret_cast<uint8_t *>(&velocity_z_);
+    uint8_t *fom = reinterpret_cast<uint8_t *>(&fom_);
 
+    serial_dvl_array[0] = 'w';
+    serial_dvl_array[1] = 'r';
+    serial_dvl_array[2] = 'z';
+    serial_dvl_array[3] = ',';
+    util_tools::array_to_array(serial_dvl_array, 4,7, stamp_sec);
+    util_tools::array_to_array(serial_dvl_array, 8,11, stamp_nanosec);
+    util_tools::array_to_array(serial_dvl_array, 12,15, altitude);
+    util_tools::array_to_array(serial_dvl_array, 16,19, velocity_x);
+    util_tools::array_to_array(serial_dvl_array, 20,23, velocity_y);
+    util_tools::array_to_array(serial_dvl_array, 24,27, velocity_z);
+    util_tools::array_to_array(serial_dvl_array, 28,31, fom);
+
+    uint8_t crc = crc8(serial_dvl_array, 32);
+    //RCLCPP_INFO(this->get_logger(), "checksum '%d' size: '%d'", crc, 32);
+
+    serial_dvl_array[32] = crc;
+    serial_dvl_array[33] = '\n';
 }
 
 void Luma_Link_Vehicle::send_data()
@@ -224,6 +249,14 @@ void Luma_Link_Vehicle::send_data()
             {
                 my_serial.flushOutput();
                 my_serial.write(serial_euler_array, 26);
+                my_serial.write(serial_baro_array, 34);
+                count++;
+            }
+            else if(count == 2)
+            {
+                my_serial.flushOutput();
+                my_serial.write(serial_euler_array, 26);
+                my_serial.write(serial_dvl_array, 34);
                 my_serial.write(serial_baro_array, 26);
                 count = 0;
             }

@@ -23,7 +23,8 @@
 #include <sensor_msgs/msg/joy.hpp>
 #include "geometry_msgs/msg/vector3_stamped.hpp"
 #include "dvl_msgs/msg/dvl.hpp"
-#include "luma_msgs/msg/luma250_lp.hpp"  
+#include "luma_msgs/msg/luma250_lp.hpp"
+#include "uuv_msgs/msg/barometer.hpp" 
 #include "luma_link/link_protocol.h"
 
 using namespace std::chrono_literals;
@@ -73,7 +74,7 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr euler_pub_;
     rclcpp::Publisher<dvl_msgs::msg::DVL>::SharedPtr dvl_pub_;
     rclcpp::Publisher<luma_msgs::msg::Luma250LP>::SharedPtr luma_pub_;
-    //rclcpp::Publisher<rov_msgs::msg::Barometer>::SharedPtr barometer_pub_;
+    rclcpp::Publisher<uuv_msgs::msg::Barometer>::SharedPtr barometer_pub_;
 
     // Create a callback group
     rclcpp::CallbackGroup::SharedPtr cb_group;

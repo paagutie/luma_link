@@ -61,7 +61,8 @@ Node("luma_link_surface_node")
 
     euler_pub_ = this->create_publisher<geometry_msgs::msg::Vector3Stamped>("luma250/euler/data", qos_sensors); 
     dvl_pub_ = this->create_publisher<dvl_msgs::msg::DVL>("luma250/dvl/data", qos_sensors); 
-    luma_pub_ = this->create_publisher<luma_msgs::msg::Luma250LP>("luma250/status", qos_sensors); 
+    luma_pub_ = this->create_publisher<luma_msgs::msg::Luma250LP>("luma250/status", qos_sensors);
+    barometer_pub_ = this->create_publisher<uuv_msgs::msg::Barometer>("luma250/barometer/data", qos_sensors);
 
 
     try
@@ -196,6 +197,8 @@ void Luma_Link_Surface::read_data(){
                 std::vector<uint8_t> data1_arr;
                 std::vector<uint8_t> data2_arr;
                 std::vector<uint8_t> data3_arr;
+                std::vector<uint8_t> data4_arr;
+                std::vector<uint8_t> data5_arr;
                 
                 if(!flagReceiveSensorData)
                 {
@@ -252,6 +255,62 @@ void Luma_Link_Surface::read_data(){
                     pressure, 
                     temperature, 
                     depth);
+                    
+                    //----- Publish barometer data  ----------------
+                    uuv_msgs::msg::Barometer baro_msg;
+                    baro_msg.header.stamp.sec = stamp_sec;
+                    baro_msg.header.stamp.nanosec = stamp_nanosec;
+                    baro_msg.header.frame_id = "luma250_barometer_data_link";
+                    baro_msg.depth = (double)depth;
+                    baro_msg.temperature = (double)temperature;
+                    baro_msg.pressure = (double)pressure;
+
+                    barometer_pub_->publish(baro_msg);
+                    
+                }
+                else if(split_message_((char*)data, count, (char*)"wrz", output))
+                {
+                
+                    for(int i=0; i < 28; i++)
+                        input.push_back(output[i]); 
+                    
+                    stamp_sec_arr = util_tools::slice(input, 0, 3);
+                    stamp_nanosec_arr = util_tools::slice(input, 4, 7);
+                    data1_arr = util_tools::slice(input, 8, 11);
+                    data2_arr = util_tools::slice(input, 12, 15);
+                    data3_arr = util_tools::slice(input, 16, 19);
+                    data4_arr = util_tools::slice(input, 20, 23);
+                    data5_arr = util_tools::slice(input, 24, 27);
+                
+                
+                    int stamp_sec = util_tools::byteToInt(stamp_sec_arr);
+                    int stamp_nanosec = util_tools::byteToInt(stamp_nanosec_arr);
+                    float altitude = util_tools::byteToFloat(data1_arr);
+                    float velocity_x = util_tools::byteToFloat(data2_arr);
+                    float velocity_y = util_tools::byteToFloat(data3_arr);
+                    float velocity_z = util_tools::byteToFloat(data4_arr);
+                    float fom = util_tools::byteToFloat(data5_arr);
+
+                    // DVL message struct
+                    /*
+                    dvl_msgs::msg::DVLBeam beam0;
+                    dvl_msgs::msg::DVLBeam beam1;
+                    dvl_msgs::msg::DVLBeam beam2;
+                    dvl_msgs::msg::DVLBeam beam3;
+                    */
+    
+                    //dvl_msgs::msg::DVLDR DVLDeadReckoning;
+                    dvl_msgs::msg::DVL dvl;
+                    dvl.header.stamp.sec = stamp_sec;
+                    dvl.header.stamp.nanosec = stamp_nanosec;
+                    dvl.velocity.x = (double)velocity_x;
+                    dvl.velocity.y = (double)velocity_y;
+                    dvl.velocity.z = (double)velocity_z;
+                    dvl.fom = (double)fom;
+                    dvl.altitude = (double)altitude;
+                    
+                    dvl_pub_->publish(dvl);
+
                     
                 }
             }

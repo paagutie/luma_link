@@ -50,6 +50,7 @@ private:
     std::vector<uint8_t> inputArray;
     uint8_t *serial_euler_array;
     uint8_t *serial_baro_array;
+    uint8_t *serial_dvl_array;
     std::vector<uint8_t> serial_euler;
     int count = 0;
     
