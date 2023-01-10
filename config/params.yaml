@@ -1,0 +1,8 @@
+luma_link_surface_node:
+  ros__parameters:
+    serial_port: "/dev/ttyUSB0"
+    joy_topic_name: "joy"
+    
+luma_link_vehicle_node:
+  ros__parameters:
+    serial_port: "/dev/ttyS1"
