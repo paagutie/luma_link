@@ -117,6 +117,37 @@ void Luma_Link_Vehicle::clear_output(sensor_msgs::msg::Joy &joy_msg)
     joy_pub_->publish(joy_msg);  
 }
 
+//function to set date and time
+void Luma_Link_Vehicle::setDateTime(int date, int month, int year,int hour, int min, int sec)
+{
+    //buffer to format command
+    char date_array[32]={0};
+    char hour_array[32]={0};
+
+    sprintf((char*)date_array,"\"%04d%02d%02d\"",year,month,date);
+    sprintf((char*)hour_array,"\"%02d:%02d:%02d\"",hour,min,sec);
+
+    string str_date(date_array);
+    string str_hour(hour_array);
+
+    string buffer_date;
+    string buffer_hour;
+    buffer_date = "sudo date +%Y%m%d -s " + str_date;
+    buffer_hour = "sudo date +%T -s " + str_hour;
+
+    const char * command_date = buffer_date.c_str();
+    const char * command_hour = buffer_hour.c_str();
+
+    //formatting command with the given parameters
+    //sprintf((char*)buff,(const char *)"sudo date -s \"%02d/%02d/%04d %02d:%02d:%02d\"",month,date,year,hour,min,sec);
+    //sprintf((char*)buff,(char *)"sudo date +%Y%m%d -s ");
+    //strcat(buff, fecha);
+
+    //execute formatted command using system()
+    system(command_date);
+    system(command_hour);
+}
+
 void Luma_Link_Vehicle::pressure_callback(const uuv_msgs::msg::Barometer::SharedPtr barometer)
 {
     int sec = barometer->header.stamp.sec;
@@ -297,6 +328,9 @@ void Luma_Link_Vehicle::receive_data(){
             first_time = current_time;
             state.brokenSignal = false;
 
+            uint8_t output[30];
+            std::vector<uint8_t> input;
+
             uint8_t crc = crc8(data, count - 2);
             //RCLCPP_INFO(this->get_logger(), "checksum '%d' checksum mess '%d'", crc, (uint8_t)data[count-2]);
             //Compare Checksum 
@@ -348,6 +382,47 @@ void Luma_Link_Vehicle::receive_data(){
                         saveROSbag = true;
                         serialCode = "1\n";
                     }
+
+                }
+                else if(split_message_((char*)data, count, (char*)"wrt", output))
+                {
+                    RCLCPP_INFO(this->get_logger(), "Synchronizing systems...");
+
+                    for(int i=0; i < 8; i++)
+                        input.push_back(output[i]);
+
+                    //std::ostringstream str1;
+                    std::vector<uint8_t> time1 = util_tools::slice(input, 0, 8);
+                    long int time_value1 = (long int)util_tools::byteToLongInt(time1);
+
+                    /*
+                    str1 << time_value1;
+                    str2 << time_value2;
+                    std::string str = str1.str() + "." + str2.str();
+
+                    double final_time = 0;
+                    std::stringstream geek(str);
+                    geek >> final_time;
+                    */
+
+
+                    std::time_t t3 = (double)time_value1;
+
+                    //CTU
+                    //tm *tm_local = localtime(&t3);
+
+                    //UTC
+                    char* dt_;
+                    tm *gmtm = gmtime(&t3);
+                    dt_ = asctime(gmtm);
+
+                    //std::cout << "The UTC date and time is " << dt_ << std::endl;
+                    this->setDateTime(gmtm->tm_mday, gmtm->tm_mon+1, 1900+gmtm->tm_year,gmtm->tm_hour, gmtm->tm_min, gmtm->tm_sec);
+
+                    RCLCPP_INFO(this->get_logger(), "The UTC date and time is '%s'", dt_);
+                    RCLCPP_INFO(this->get_logger(), "Systems are already synchronized :)");
+                    serialCode = "4\n";
+                    input.clear();
 
                 }
             }

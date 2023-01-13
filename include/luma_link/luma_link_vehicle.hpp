@@ -107,6 +107,7 @@ private:
     void clear_output(sensor_msgs::msg::Joy &joy_msg);
     void receive_data();
     void send_data();
+    void setDateTime(int date, int month, int year,int hour, int min, int sec);
     //Subscribers
     void imu_callback(const sensor_msgs::msg::Imu::SharedPtr imu);
     void euler_callback(const geometry_msgs::msg::Vector3Stamped::SharedPtr euler);

@@ -27,6 +27,7 @@ Node("luma_link_surface_node")
     bytesButtons = new uint8_t[2];
     
     bytesJoystick = new uint8_t[12];
+    serial_time_array = new uint8_t[40];
     //str_crc = new uint8_t[3];
     
 
@@ -97,6 +98,7 @@ Luma_Link_Surface::~Luma_Link_Surface() {
     delete [] bytesAxes;
     delete [] prev_bytesAxes;
     delete [] bytesButtons;
+    delete [] serial_time_array;
   
     my_serial.flush();
     my_serial.close();
@@ -134,9 +136,14 @@ void Luma_Link_Surface::call_joystick(const sensor_msgs::msg::Joy::SharedPtr joy
             prev_buttons[i] = buttons[i];
             joystickActive = true;
         }
-        //if(buttons[i] > 0)
-            //joystickActive = true;
+        if(buttons[2] == 1 && !setTimeActive)
+        {
+            setTime = true;
+            setTimeActive = true;
+        }
+
     }
+
 
     //1 Bytes per Button is assigned to 1 bit
     //Data is sent in decimal (uint8_t)
@@ -317,9 +324,16 @@ void Luma_Link_Surface::read_data(){
             else if(count <= 2)
             {
                 if(data[0] == '0')
-                    RCLCPP_INFO(this->get_logger(), "The rosbag was stoped");
+                    RCLCPP_INFO(this->get_logger(), "The rosbag was stopped");
                 else if(data[0] == '1')
                     RCLCPP_INFO(this->get_logger(), "The rosbag was started");
+
+                if(data[0] == '4')
+                {
+                    RCLCPP_INFO(this->get_logger(), "The time was set!");
+                    setTimeActive = false;
+                }
+
 
                 if(flagReceiveSensorData && data[0] == '3')
                 {
@@ -360,6 +374,45 @@ void Luma_Link_Surface::send_data(){
             my_serial.write(bytesJoystick, 11);
             first_time = current_time;
             joystickActive = false;
+
+
+            if(setTime)
+            {
+                std::time_t now = time(0);
+
+                static_assert(sizeof(double) == 8);
+                uint8_t *array = reinterpret_cast<uint8_t *>(&now);
+                // convert now to string form
+                uint8_t* dt = (uint8_t*)ctime(&now);
+
+		/*
+                //CTU
+                tm *tm_local = localtime(&now);
+
+                //UTC
+                char* dt_;
+                tm *gmtm = gmtime(&now);
+                dt_ = asctime(gmtm);
+                */
+
+                RCLCPP_INFO(this->get_logger(), "time '%s'", dt);
+
+                serial_time_array[0] = 'w';
+                serial_time_array[1] = 'r';
+                serial_time_array[2] = 't';
+                serial_time_array[3] = ',';
+                util_tools::array_to_array(serial_time_array, 4,11, array);
+
+                uint8_t crc = crc8(serial_time_array, 12);
+
+                serial_time_array[12] = crc;
+                serial_time_array[13] = '\n';
+
+                my_serial.flushOutput();
+                my_serial.write(serial_time_array, 14);
+                setTime = false;
+            }
+
         }
         else
         {

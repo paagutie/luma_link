@@ -50,9 +50,12 @@ private:
     uint8_t *prev_bytesAxes;
     uint8_t *bytesButtons;
     uint8_t *bytesJoystick;
+    uint8_t *serial_time_array;
     //uint8_t *str_crc;
     bool flagReceiveSensorData = false;
     bool flagStopReceiveSensorData = false;
+    bool setTime = false;
+    bool setTimeActive = false;
     string serial_port;
     string joy_topic_name;
     //Serial input buffer
