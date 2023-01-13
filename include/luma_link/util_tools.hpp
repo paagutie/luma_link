@@ -99,6 +99,19 @@ int byteToInt(const std::vector<uint8_t> array)
     return test.myInt;
 }
 
+long int byteToLongInt(const std::vector<uint8_t> array)
+{
+    union{
+        long int myInt;
+	uint8_t myChars[sizeof(long int)];
+    } union_;
+
+    for( int k = 0; k < (int)sizeof(long int); k++ )
+        union_.myChars[k] = array[k];
+
+    return union_.myInt;
+}
+
 // @param array : output array
 // @return : double
 float byteToFloat(const std::vector<uint8_t> array)
